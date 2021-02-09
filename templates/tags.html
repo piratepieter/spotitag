@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Your tags</h1>
+    {% for tag, artists in tags.items() %}
+        <h2>{{ tag }}</h2>
+        {% for artist in artists %}
+            <div><p><a href="{{ artist.url }}">{{ artist.name }}</a> (<a href="{{ artist.edit }}">edit</a>)</p></div>
+        {% endfor %}
+    {% endfor %}
+{% endblock %}
