@@ -1,7 +1,5 @@
-import os
-basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
     SECRET_KEY = 'omg'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = 'mysql://piratepieter:sql_spotitag@piratepieter.mysql.eu.pythonanywhere-services.com/piratepieter$default'
     SQLALCHEMY_TRACK_MODIFICATIONS = False

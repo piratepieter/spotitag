@@ -3,6 +3,8 @@
 
 from flask import Flask
 from flask import render_template, url_for, redirect
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from collections import defaultdict
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -18,6 +20,9 @@ TAG_TABLE['bad'] = ['3r2qdoM2Ryp8aBb3S3qIG1']
 
 app = Flask(__name__)
 app.config.from_object(Config)
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/index')
