@@ -1,6 +1,11 @@
 <html>
     <head>
         <title>Tag your Spotify</title>
+        {% if current_user.is_anonymous %}
+            <a href="{{ url_for('login') }}">Login</a>
+        {% else %}
+            Logged in as {{ current_user }} (<a href="{{ url_for('logout') }}">Log out</a>)
+        {% endif %}
     </head>
     <body>
         {% block content %}{% endblock %}

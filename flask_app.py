@@ -2,14 +2,15 @@
 # A very simple Flask Hello World app for you to get started with...
 
 from flask import Flask
-from flask import render_template, url_for, redirect
+from flask import render_template, url_for, redirect, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_login import LoginManager, current_user, login_user, logout_user
 from collections import defaultdict
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
-from forms import QueryForm, EditForm
+from forms import QueryForm, EditForm, LoginForm
 from config import Config
 
 SECRET_KEY = 'omg'
@@ -22,8 +23,9 @@ app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+login = LoginManager(app)
 
-import models
+from models import User
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/index')
@@ -32,6 +34,28 @@ def index():
     if form.validate_on_submit():
         return redirect(url_for('search_result', artist=form.artist_query.data))
     return render_template('index.html', form=form)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user is None or not user.check_password(form.password.data):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
+        login_user(user, remember=form.remember_me.data)
+        return redirect(url_for('index'))
+    return render_template('login.html', title='Sign In', form=form)
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
 
 @app.route('/result/<artist>')
 def search_result(artist):
