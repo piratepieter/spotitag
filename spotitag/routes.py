@@ -3,9 +3,9 @@ from flask_login import current_user, login_user, logout_user
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
-from forms import QueryForm, EditForm, LoginForm, RegistrationForm
-from flask_app import app, db
-from models import User
+from spotitag.forms import QueryForm, EditForm, LoginForm, RegistrationForm
+from spotitag import app, db
+from spotitag.models import User
 
 
 from collections import defaultdict
