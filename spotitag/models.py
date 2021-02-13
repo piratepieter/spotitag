@@ -36,6 +36,12 @@ class Tag(db.Model):
         return self.label
 
 
+class Artist(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    spotify_id = db.Column(db.String(32), index=True, unique=True)
+
+
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
