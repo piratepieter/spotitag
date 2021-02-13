@@ -1,5 +1,6 @@
+import os
 
 class Config(object):
     SECRET_KEY = 'omg'
-    SQLALCHEMY_DATABASE_URI = 'mysql://piratepieter:sql_spotitag@piratepieter.mysql.eu.pythonanywhere-services.com/piratepieter$default'
+    SQLALCHEMY_DATABASE_URI = os.environ['SPOTITAG_URI']
     SQLALCHEMY_TRACK_MODIFICATIONS = False
