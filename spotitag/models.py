@@ -26,11 +26,26 @@ class User(UserMixin, db.Model):
         return self.username
 
 
+artist_tags = db.Table('artist_tags',
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
+    db.Column('artist_id', db.Integer, db.ForeignKey('artist.id'))
+)
+
+
 class Tag(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     label = db.Column(db.String(120), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    artists = db.relationship(
+        'Artist',
+        secondary=artist_tags,
+        primaryjoin=(artist_tags.c.tag_id == id),
+        secondaryjoin=(artist_tags.c.artist_id == id),
+        backref=db.backref('tags', lazy='dynamic'),
+        lazy='dynamic'
+    )
 
     def __repr__(self):
         return self.label
