@@ -1,17 +1,12 @@
-from flask import render_template, url_for, redirect, flash
-from flask_login import current_user, login_user, logout_user
+from flask import render_template, url_for, redirect, flash, request
+from flask_login import current_user, login_user, logout_user, login_required
+from werkzeug.urls import url_parse
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
 from spotitag.forms import QueryForm, EditForm, LoginForm, RegistrationForm
 from spotitag import app, db
-from spotitag.models import User
-
-
-from collections import defaultdict
-TAG_TABLE = defaultdict(list)
-TAG_TABLE['good'] = ['4Z8W4fKeB5YxbusRsdQVPb', '1uRxRKC7d9zwYGSRflTKDR']
-TAG_TABLE['bad'] = ['3r2qdoM2Ryp8aBb3S3qIG1']
+from spotitag.models import User, TAG_TABLE
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -34,7 +29,10 @@ def login():
             flash('Invalid username or password')
             return redirect(url_for('login'))
         login_user(user, remember=form.remember_me.data)
-        return redirect(url_for('index'))
+        next_page = request.args.get('next')
+        if not next_page or url_parse(next_page).netloc != '':
+            next_page = url_for('index')
+        return redirect(next_page)
     return render_template('login.html', title='Sign In', form=form)
 
 
@@ -87,21 +85,27 @@ def fill_artist_details(artist_id):
     return artist_details
 
 
+def user_tag_table():
+    return TAG_TABLE[current_user.id]
+
+
 @app.route('/tags')
+@login_required
 def show_tags():
     tags = {
         tag: [fill_artist_details(artist_id) for artist_id in artists]
-        for tag, artists in TAG_TABLE.items()
+        for tag, artists in user_tag_table().items()
     }
     return render_template('tags.html', tags=tags)
 
 
 @app.route('/edit/<artist_id>', methods=['GET', 'POST'])
+@login_required
 def edit_artist(artist_id):
     artist = fill_artist_details(artist_id)
 
     tags = [
-        tag for tag, artists in TAG_TABLE.items()
+        tag for tag, artists in user_tag_table().items()
         if artist_id in artists
     ]
 
@@ -109,12 +113,12 @@ def edit_artist(artist_id):
     if form.validate_on_submit():
         new_tags = [tag.strip() for tag in form.new_tags.data.split(';')]
         for tag in new_tags:
-            if tag != '' and (tag not in TAG_TABLE or artist_id not in TAG_TABLE[tag]):
-                TAG_TABLE[tag].append(artist_id)
+            if tag != '' and (tag not in user_tag_table() or artist_id not in user_tag_table()[tag]):
+                user_tag_table()[tag].append(artist_id)
 
         for old_tag in tags:
             if old_tag not in new_tags:
-                TAG_TABLE[old_tag].remove(artist_id)
+                user_tag_table()[old_tag].remove(artist_id)
 
         return redirect(url_for('show_tags'))
 

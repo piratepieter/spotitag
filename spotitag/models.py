@@ -4,6 +4,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from spotitag import db, login
 
 
+from collections import defaultdict
+TAG_TABLE = defaultdict(lambda: defaultdict(list))
+
+
 class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
