@@ -1,11 +1,9 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.exc import IntegrityError
+from collections import defaultdict
 
 from spotitag import db, login
-
-
-from collections import defaultdict
-TAG_TABLE = defaultdict(lambda: defaultdict(list))
 
 
 class User(UserMixin, db.Model):
@@ -25,10 +23,44 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return self.username
 
+    def set_artist_tags(self, tag_labels, artist_spotify_id):
+        tags = Tag.get_tags(labels=tag_labels, user=self)
+        artist = Artist.get(artist_spotify_id)
+
+        for tag in tags:
+            if artist not in tag.artists.all():
+                tag.artists.append(artist)
+
+        db.session.commit()
+
+        all_artist_tags = set(self.tags_by_artist()[artist_spotify_id])
+        tags_to_remove = all_artist_tags - set(tags)
+        print(tags_to_remove)
+        for tag in tags_to_remove:
+            tag.artists.remove(artist)
+
+        db.session.commit()
+
+    def artists_by_tag(self):
+        tag_artists = {
+            tag: [artist.spotify_id for artist in tag.artists.all()]
+            for tag in self.tags.all()
+        }
+
+        return tag_artists
+
+    def tags_by_artist(self):
+        artist_tags = defaultdict(list)
+        for tag, artists in self.artists_by_tag().items():
+            for artist in artists:
+                artist_tags[artist].append(tag)
+        return artist_tags
+
 
 artist_tags = db.Table('artist_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
-    db.Column('artist_id', db.Integer, db.ForeignKey('artist.id'))
+    db.Column('artist_id', db.Integer, db.ForeignKey('artist.id')),
+    db.UniqueConstraint('tag_id', 'artist_id', name='unique_ids'),
 )
 
 
@@ -41,8 +73,6 @@ class Tag(db.Model):
     artists = db.relationship(
         'Artist',
         secondary=artist_tags,
-        primaryjoin=(artist_tags.c.tag_id == id),
-        secondaryjoin=(artist_tags.c.artist_id == id),
         backref=db.backref('tags', lazy='dynamic'),
         lazy='dynamic'
     )
@@ -50,11 +80,40 @@ class Tag(db.Model):
     def __repr__(self):
         return self.label
 
+    def __normalize(self, label):
+        return label.lower()
+
+    @classmethod
+    def get_tags(cls, labels, user):
+        existing_tags = user.tags.all()
+        existing_labels = [tag.label for tag in existing_tags]
+
+        tags = [tag for tag in existing_tags if tag.label in labels]
+
+        new_labels = set(labels) - set(existing_labels)
+        for label in new_labels:
+            tag = cls(label=label, user=user)
+            db.session.add(tag)
+            tags.append(tag)
+        db.session.commit()
+
+        return tags
+
 
 class Artist(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     spotify_id = db.Column(db.String(32), index=True, unique=True)
+
+    @classmethod
+    def get(cls, spotify_id):
+        try:
+            db.session.add(cls(spotify_id=spotify_id))
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+
+        return cls.query.filter(cls.spotify_id == spotify_id)[0]
 
 
 @login.user_loader

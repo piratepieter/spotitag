@@ -6,7 +6,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 
 from spotitag.forms import QueryForm, EditForm, LoginForm, RegistrationForm
 from spotitag import app, db
-from spotitag.models import User, TAG_TABLE
+from spotitag.models import User
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -85,16 +85,12 @@ def fill_artist_details(artist_id):
     return artist_details
 
 
-def user_tag_table():
-    return TAG_TABLE[current_user.id]
-
-
 @app.route('/tags')
 @login_required
 def show_tags():
     tags = {
         tag: [fill_artist_details(artist_id) for artist_id in artists]
-        for tag, artists in user_tag_table().items()
+        for tag, artists in current_user.artists_by_tag().items()
     }
     return render_template('tags.html', tags=tags)
 
@@ -104,24 +100,19 @@ def show_tags():
 def edit_artist(artist_id):
     artist = fill_artist_details(artist_id)
 
-    tags = [
-        tag for tag, artists in user_tag_table().items()
-        if artist_id in artists
-    ]
+    tags = current_user.tags_by_artist()[artist_id]
 
     form = EditForm()
     if form.validate_on_submit():
-        new_tags = [tag.strip() for tag in form.new_tags.data.split(';')]
-        for tag in new_tags:
-            if tag != '' and (tag not in user_tag_table() or artist_id not in user_tag_table()[tag]):
-                user_tag_table()[tag].append(artist_id)
-
-        for old_tag in tags:
-            if old_tag not in new_tags:
-                user_tag_table()[old_tag].remove(artist_id)
+        new_tags = [
+            tag.strip()
+            for tag in form.new_tags.data.split(';')
+            if tag != ''
+        ]
+        current_user.set_artist_tags(new_tags, artist_id)
 
         return redirect(url_for('show_tags'))
 
-    form.new_tags.data = ';'.join(tags)
+    form.new_tags.data = ';'.join(tag.label for tag in tags)
 
     return render_template('edit.html', form=form, artist=artist)
