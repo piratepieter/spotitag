@@ -64,6 +64,13 @@ artist_tags = db.Table('artist_tags',
 )
 
 
+album_tags = db.Table('album_tags',
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
+    db.Column('album_id', db.Integer, db.ForeignKey('album.id')),
+    db.UniqueConstraint('tag_id', 'album_id', name='unique_ids'),
+)
+
+
 class Tag(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
@@ -73,6 +80,13 @@ class Tag(db.Model):
     artists = db.relationship(
         'Artist',
         secondary=artist_tags,
+        backref=db.backref('tags', lazy='dynamic'),
+        lazy='dynamic'
+    )
+
+    albums = db.relationship(
+        'Album',
+        secondary=album_tags,
         backref=db.backref('tags', lazy='dynamic'),
         lazy='dynamic'
     )
@@ -101,6 +115,21 @@ class Tag(db.Model):
 
 
 class Artist(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    spotify_id = db.Column(db.String(32), index=True, unique=True)
+
+    @classmethod
+    def get(cls, spotify_id):
+        try:
+            db.session.add(cls(spotify_id=spotify_id))
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+
+        return cls.query.filter(cls.spotify_id == spotify_id)[0]
+
+class Album(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     spotify_id = db.Column(db.String(32), index=True, unique=True)
