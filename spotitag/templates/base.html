@@ -1,6 +1,12 @@
 <html>
     <head>
         <title>Tag your Spotify</title>
+        {% if not current_user.is_anonymous %}
+            Navigate: 
+            <a href="{{ url_for('index') }}">Search</a>
+            <a href="{{ url_for('show_tags') }}">Tags</a>
+            |
+        {% endif %}
         {% if current_user.is_anonymous %}
             <a href="{{ url_for('register') }}">Register</a> <a href="{{ url_for('login') }}">Login</a>
         {% else %}
