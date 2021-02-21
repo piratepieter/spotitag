@@ -3,6 +3,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.urls import url_parse
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+from collections import defaultdict
 
 from spotitag.forms import QueryForm, EditForm, LoginForm, RegistrationForm
 from spotitag import app, db
@@ -111,10 +112,17 @@ def fill_album_details(album_id):
 @app.route('/tags')
 @login_required
 def show_tags():
-    tags = {
-        tag: [fill_artist_details(artist_id) for artist_id in artists]
-        for tag, artists in current_user.artists_by_tag().items()
-    }
+    tags = defaultdict(lambda: defaultdict(list))
+
+    for tag, artists in current_user.artists_by_tag().items():
+        for artist_id in artists:
+            tags[tag]['artists'].append(fill_artist_details(artist_id))
+
+    for tag, albums in current_user.albums_by_tag().items():
+        for album_id in albums:
+            tags[tag]['albums'].append(fill_album_details(album_id))
+
+
     return render_template('tags.html', tags=tags)
 
 
