@@ -35,7 +35,6 @@ class User(UserMixin, db.Model):
 
         all_artist_tags = set(self.tags_by_artist()[artist_spotify_id])
         tags_to_remove = all_artist_tags - set(tags)
-        print(tags_to_remove)
         for tag in tags_to_remove:
             tag.artists.remove(artist)
 
@@ -55,6 +54,38 @@ class User(UserMixin, db.Model):
             for artist in artists:
                 artist_tags[artist].append(tag)
         return artist_tags
+
+    def set_album_tags(self, tag_labels, album_spotify_id):
+        tags = Tag.get_tags(labels=tag_labels, user=self)
+        album = Album.get(album_spotify_id)
+
+        for tag in tags:
+            if album not in tag.albums.all():
+                tag.albums.append(album)
+
+        db.session.commit()
+
+        all_album_tags = set(self.tags_by_album()[album_spotify_id])
+        tags_to_remove = all_album_tags - set(tags)
+        for tag in tags_to_remove:
+            tag.albums.remove(album)
+
+        db.session.commit()
+
+    def albums_by_tag(self):
+        tag_albums = {
+            tag: [album.spotify_id for album in tag.albums.all()]
+            for tag in self.tags.all()
+        }
+
+        return tag_albums
+
+    def tags_by_album(self):
+        album_tags = defaultdict(list)
+        for tag, albums in self.albums_by_tag().items():
+            for album in albums:
+                album_tags[album].append(tag)
+        return album_tags
 
 
 artist_tags = db.Table('artist_tags',

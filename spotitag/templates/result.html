@@ -4,5 +4,8 @@
     <h1>Results</h1>
     {% for result in results %}
         <div><p><a href="{{ result.url }}">{{ result.name }}</a> (<a href="{{ result.edit }}">edit</a>)</p></div>
+        {% for album in result['albums'] %}
+            <div><p><a href="{{ album.url }}" style="margin-left: 40px">{{ album.name }}</a> (<a href="{{ album.edit }}">edit</a>)</p></div>
+        {% endfor %}
     {% endfor %}
 {% endblock %}

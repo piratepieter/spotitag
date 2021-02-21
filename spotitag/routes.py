@@ -74,15 +74,38 @@ def search_result(artist):
 def fill_artist_details(artist_id):
     spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
     result = spotify.artist(artist_id)
+    album_result = spotify.artist_albums(artist_id, album_type='album')
 
     artist_details = {
         'id': artist_id,
         'url': result['external_urls']['spotify'],
         'name': result['name'],
         'edit': url_for('edit_artist', artist_id=artist_id),
+        'albums': [
+                {
+                    'id': album['id'],
+                    'name': album['name'],
+                    'url': album['external_urls']['spotify'],
+                    'edit': url_for('edit_album', album_id=album['id']),
+                }
+                for album in album_result['items']
+            ],
     }
 
     return artist_details
+
+
+def fill_album_details(album_id):
+    spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
+    result = spotify.album(album_id)
+    album_details = {
+        'id': result['id'],
+        'name': result['name'],
+        'url': result['external_urls']['spotify'],
+        'edit': url_for('edit_album', album_id=album_id),
+    }
+
+    return album_details
 
 
 @app.route('/tags')
@@ -95,7 +118,7 @@ def show_tags():
     return render_template('tags.html', tags=tags)
 
 
-@app.route('/edit/<artist_id>', methods=['GET', 'POST'])
+@app.route('/editartist/<artist_id>', methods=['GET', 'POST'])
 @login_required
 def edit_artist(artist_id):
     artist = fill_artist_details(artist_id)
@@ -116,3 +139,26 @@ def edit_artist(artist_id):
     form.new_tags.data = ';'.join(tag.label for tag in tags)
 
     return render_template('edit.html', form=form, artist=artist)
+
+
+@app.route('/editalbum/<album_id>', methods=['GET', 'POST'])
+@login_required
+def edit_album(album_id):
+    album = fill_album_details(album_id)
+
+    tags = current_user.tags_by_album()[album_id]
+
+    form = EditForm()
+    if form.validate_on_submit():
+        new_tags = [
+            tag.strip()
+            for tag in form.new_tags.data.split(';')
+            if tag != ''
+        ]
+        current_user.set_album_tags(new_tags, album_id)
+
+        return redirect(url_for('show_tags'))
+
+    form.new_tags.data = ';'.join(tag.label for tag in tags)
+
+    return render_template('edit.html', form=form, artist=album)
