@@ -91,14 +91,14 @@ class User(UserMixin, db.Model):
 artist_tags = db.Table('artist_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
     db.Column('artist_id', db.Integer, db.ForeignKey('artist.id')),
-    db.UniqueConstraint('tag_id', 'artist_id', name='unique_ids'),
+    db.UniqueConstraint('tag_id', 'artist_id', name='unique_artist_tag'),
 )
 
 
 album_tags = db.Table('album_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
     db.Column('album_id', db.Integer, db.ForeignKey('album.id')),
-    db.UniqueConstraint('tag_id', 'album_id', name='unique_ids'),
+    db.UniqueConstraint('tag_id', 'album_id', name='unique_album_tag'),
 )
 
 
