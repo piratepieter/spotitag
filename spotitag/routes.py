@@ -63,7 +63,7 @@ def search_result(artist):
 
     search = spotify_client.search(q=f'artist:{artist}', type='artist')
     results = [
-        Artist.details(item['id'])
+        Artist.get(item['id']).details()
         for item in search['artists']['items']
     ]
 
@@ -76,12 +76,12 @@ def show_tags():
     tags = defaultdict(lambda: defaultdict(list))
 
     for tag, artists in current_user.artists_by_tag().items():
-        for artist_id in artists:
-            tags[tag]['artists'].append(Artist.details(artist_id))
+        for artist in artists:
+            tags[tag]['artists'].append(artist.details())
 
     for tag, albums in current_user.albums_by_tag().items():
-        for album_id in albums:
-            tags[tag]['albums'].append(Album.details(album_id))
+        for album in albums:
+            tags[tag]['albums'].append(album.details())
 
 
     return render_template('tags.html', tags=tags)
@@ -90,9 +90,10 @@ def show_tags():
 @app.route('/editartist/<artist_id>', methods=['GET', 'POST'])
 @login_required
 def edit_artist(artist_id):
-    artist = Artist.details(artist_id)
+    artist = Artist.get(artist_id)
+    artist_details = artist.details()
 
-    tags = current_user.tags_by_artist()[artist_id]
+    tags = current_user.tags_by_artist()[artist]
 
     form = EditForm()
     if form.validate_on_submit():
@@ -107,15 +108,16 @@ def edit_artist(artist_id):
 
     form.new_tags.data = ';'.join(tag.label for tag in tags)
 
-    return render_template('edit.html', form=form, artist=artist)
+    return render_template('edit.html', form=form, artist=artist_details)
 
 
 @app.route('/editalbum/<album_id>', methods=['GET', 'POST'])
 @login_required
 def edit_album(album_id):
-    album = Album.details(album_id)
+    album = Album.get(album_id)
+    album_details = album.details()
 
-    tags = current_user.tags_by_album()[album_id]
+    tags = current_user.tags_by_album()[album]
 
     form = EditForm()
     if form.validate_on_submit():
@@ -130,4 +132,4 @@ def edit_album(album_id):
 
     form.new_tags.data = ';'.join(tag.label for tag in tags)
 
-    return render_template('edit.html', form=form, artist=album)
+    return render_template('edit.html', form=form, artist=album_details)
