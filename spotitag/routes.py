@@ -1,13 +1,11 @@
 from flask import render_template, url_for, redirect, flash, request
 from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.urls import url_parse
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
 from collections import defaultdict
 
 from spotitag.forms import QueryForm, EditForm, LoginForm, RegistrationForm
 from spotitag import app, db
-from spotitag.models import User
+from spotitag.models import User, Album, Artist, get_spotify_client
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -61,52 +59,15 @@ def register():
 @app.route('/result/<artist>')
 def search_result(artist):
 
-    spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
+    spotify_client = get_spotify_client()
 
-    search = spotify.search(q=f'artist:{artist}', type='artist')
+    search = spotify_client.search(q=f'artist:{artist}', type='artist')
     results = [
-        fill_artist_details(item['id'])
+        Artist.details(item['id'])
         for item in search['artists']['items']
     ]
 
     return render_template('result.html', results=results)
-
-
-def fill_artist_details(artist_id):
-    spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
-    result = spotify.artist(artist_id)
-    album_result = spotify.artist_albums(artist_id, album_type='album')
-
-    artist_details = {
-        'id': artist_id,
-        'url': result['external_urls']['spotify'],
-        'name': result['name'],
-        'edit': url_for('edit_artist', artist_id=artist_id),
-        'albums': [
-                {
-                    'id': album['id'],
-                    'name': album['name'],
-                    'url': album['external_urls']['spotify'],
-                    'edit': url_for('edit_album', album_id=album['id']),
-                }
-                for album in album_result['items']
-            ],
-    }
-
-    return artist_details
-
-
-def fill_album_details(album_id):
-    spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
-    result = spotify.album(album_id)
-    album_details = {
-        'id': result['id'],
-        'name': result['name'],
-        'url': result['external_urls']['spotify'],
-        'edit': url_for('edit_album', album_id=album_id),
-    }
-
-    return album_details
 
 
 @app.route('/tags')
@@ -116,11 +77,11 @@ def show_tags():
 
     for tag, artists in current_user.artists_by_tag().items():
         for artist_id in artists:
-            tags[tag]['artists'].append(fill_artist_details(artist_id))
+            tags[tag]['artists'].append(Artist.details(artist_id))
 
     for tag, albums in current_user.albums_by_tag().items():
         for album_id in albums:
-            tags[tag]['albums'].append(fill_album_details(album_id))
+            tags[tag]['albums'].append(Album.details(album_id))
 
 
     return render_template('tags.html', tags=tags)
@@ -129,7 +90,7 @@ def show_tags():
 @app.route('/editartist/<artist_id>', methods=['GET', 'POST'])
 @login_required
 def edit_artist(artist_id):
-    artist = fill_artist_details(artist_id)
+    artist = Artist.details(artist_id)
 
     tags = current_user.tags_by_artist()[artist_id]
 
@@ -152,7 +113,7 @@ def edit_artist(artist_id):
 @app.route('/editalbum/<album_id>', methods=['GET', 'POST'])
 @login_required
 def edit_album(album_id):
-    album = fill_album_details(album_id)
+    album = Album.details(album_id)
 
     tags = current_user.tags_by_album()[album_id]
 

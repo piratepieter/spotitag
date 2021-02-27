@@ -1,9 +1,16 @@
 from flask_login import UserMixin
+from flask import url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
 from collections import defaultdict
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 
 from spotitag import db, login
+
+
+def get_spotify_client():
+    return spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
 
 
 class User(UserMixin, db.Model):
@@ -160,6 +167,31 @@ class Artist(db.Model):
 
         return cls.query.filter(cls.spotify_id == spotify_id)[0]
 
+    @staticmethod
+    def details(artist_id):
+        spotify_client = get_spotify_client()
+        result = spotify_client.artist(artist_id)
+        album_result = spotify_client.artist_albums(artist_id, album_type='album')
+
+        artist_details = {
+            'id': artist_id,
+            'url': result['external_urls']['spotify'],
+            'name': result['name'],
+            'edit': url_for('edit_artist', artist_id=artist_id),
+            'albums': [
+                    {
+                        'id': album['id'],
+                        'name': album['name'],
+                        'url': album['external_urls']['spotify'],
+                        'edit': url_for('edit_album', album_id=album['id']),
+                    }
+                    for album in album_result['items']
+                ],
+        }
+
+        return artist_details
+
+
 class Album(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
@@ -174,6 +206,19 @@ class Album(db.Model):
             db.session.rollback()
 
         return cls.query.filter(cls.spotify_id == spotify_id)[0]
+
+    @staticmethod
+    def details(album_id):
+        spotify_client = get_spotify_client()
+        result = spotify_client.album(album_id)
+        album_details = {
+            'id': result['id'],
+            'name': result['name'],
+            'url': result['external_urls']['spotify'],
+            'edit': url_for('edit_album', album_id=album_id),
+        }
+
+        return album_details
 
 
 @login.user_loader
