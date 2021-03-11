@@ -2,10 +2,10 @@
 
 {% block content %}
     <h1>Results</h1>
-    {% for result in results %}
-        <div><p><a href="{{ result.url }}">{{ result.name }}</a> (<a href="{{ result.edit }}">edit</a>)</p></div>
-        {% for album in result['albums'] %}
-            <div><p><a href="{{ album.url }}" style="margin-left: 40px">{{ album.name }}</a> (<a href="{{ album.edit }}">edit</a>)</p></div>
+    {% for artist in artists %}
+        <div><p><a href="{{ artist.spotifyURL() }}">{{ artist.name() }}</a> (<a href="{{ artist.editURL() }}">edit</a>)</p></div>
+        {% for album in artist.albums() %}
+            <div><p><a href="{{ album.spotifyURL() }}" style="margin-left: 40px">{{ album.name() }}</a> (<a href="{{ album.editURL() }}">edit</a>)</p></div>
         {% endfor %}
     {% endfor %}
 {% endblock %}

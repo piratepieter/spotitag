@@ -62,12 +62,12 @@ def search_result(artist):
     spotify_client = get_spotify_client()
 
     search = spotify_client.search(q=f'artist:{artist}', type='artist')
-    results = [
-        Artist.get(item['id']).details()
+    artists = [
+        Artist.get(item['id'])
         for item in search['artists']['items']
     ]
 
-    return render_template('result.html', results=results)
+    return render_template('result.html', artists=artists)
 
 
 @app.route('/tags')
@@ -77,11 +77,11 @@ def show_tags():
 
     for tag, artists in current_user.artists_by_tag().items():
         for artist in artists:
-            tags[tag]['artists'].append(artist.details())
+            tags[tag]['artists'].append(artist)
 
     for tag, albums in current_user.albums_by_tag().items():
         for album in albums:
-            tags[tag]['albums'].append(album.details())
+            tags[tag]['albums'].append(album)
 
 
     return render_template('tags.html', tags=tags)
@@ -91,8 +91,7 @@ def show_tags():
 @login_required
 def edit_artist(artist_id):
     artist = Artist.get(artist_id)
-    artist_details = artist.details()
-
+    
     tags = current_user.tags_by_artist()[artist]
 
     form = EditForm()
@@ -108,14 +107,13 @@ def edit_artist(artist_id):
 
     form.new_tags.data = ';'.join(tag.label for tag in tags)
 
-    return render_template('edit.html', form=form, artist=artist_details)
+    return render_template('edit.html', form=form, item=artist)
 
 
 @app.route('/editalbum/<album_id>', methods=['GET', 'POST'])
 @login_required
 def edit_album(album_id):
     album = Album.get(album_id)
-    album_details = album.details()
 
     tags = current_user.tags_by_album()[album]
 
@@ -132,4 +130,4 @@ def edit_album(album_id):
 
     form.new_tags.data = ';'.join(tag.label for tag in tags)
 
-    return render_template('edit.html', form=form, artist=album_details)
+    return render_template('edit.html', form=form, item=album)

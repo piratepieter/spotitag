@@ -5,10 +5,10 @@
     {% for tag, tagged in tags.items() %}
         <h2>{{ tag }}</h2>
         {% for artist in tagged['artists'] %}
-            <div><p><a href="{{ artist.url }}">{{ artist.name }}</a> (<a href="{{ artist.edit }}">edit</a>)</p></div>
+            <div><p><a href="{{ artist.spotifyURL() }}">{{ artist.name() }}</a> (<a href="{{ artist.editURL() }}">edit</a>)</p></div>
         {% endfor %}
         {% for album in tagged['albums'] %}
-            <div><p><a href="{{ album.url }}">{{ album.name }}</a> (<a href="{{ album.edit }}">edit</a>)</p></div>
+            <div><p><a href="{{ album.spotifyURL() }}">{{ album.name() }}</a> (<a href="{{ album.editURL() }}">edit</a>)</p></div>
         {% endfor %}
     {% endfor %}
 {% endblock %}

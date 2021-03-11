@@ -153,27 +153,32 @@ class Tag(db.Model):
         return tags
 
 
-@memoize(maxsize=512, ttl=3600)
 def _get_artist_details(spotify_id):
-    spotify_client = get_spotify_client()
-    result = spotify_client.artist(spotify_id)
-    album_result = spotify_client.artist_albums(spotify_id, album_type='album')
+    @memoize(maxsize=512, ttl=3600)
+    def memoized_details(spotify_id):
+        spotify_client = get_spotify_client()
+        result = spotify_client.artist(spotify_id)
+        album_result = spotify_client.artist_albums(spotify_id, album_type='album')
 
-    artist_details = {
-        'id': spotify_id,
-        'url': result['external_urls']['spotify'],
-        'name': result['name'],
-        'edit': url_for('edit_artist', artist_id=spotify_id),
-        'albums': [
-                {
-                    'id': album['id'],
-                    'name': album['name'],
-                    'url': album['external_urls']['spotify'],
-                    'edit': url_for('edit_album', album_id=album['id']),
-                }
-                for album in album_result['items']
-            ],
-    }
+        artist_details = {
+            'id': spotify_id,
+            'url': result['external_urls']['spotify'],
+            'name': result['name'],
+            'edit': url_for('edit_artist', artist_id=spotify_id),
+            'albums':
+                [
+                    album['id'] for album in album_result['items']
+                ],
+        }
+        return artist_details
+
+    artist_details = memoized_details(spotify_id)
+    album_ids = artist_details['albums']
+    albums = [
+        Album.get(album_id) for album_id in album_ids
+    ]
+    artist_details['albums'] = albums
+
     return artist_details
 
 
@@ -192,19 +197,31 @@ class Artist(db.Model):
 
         return cls.query.filter(cls.spotify_id == spotify_id)[0]
 
-    def details(self):
+    def name(self):
+        return self.__details()['name']
+
+    def spotifyURL(self):
+        return self.__details()['url']
+
+    def editURL(self):
+        return url_for('edit_artist', artist_id=self.spotify_id)
+
+    def albums(self):
+        return self.__details()['albums']
+
+    def __details(self):
         return _get_artist_details(self.spotify_id)
 
 
 @memoize(maxsize=512, ttl=3600)
-def _get_album_details(self):
+def _get_album_details(spotify_id):
     spotify_client = get_spotify_client()
-    result = spotify_client.album(self.spotify_id)
+    result = spotify_client.album(spotify_id)
     album_details = {
         'id': result['id'],
         'name': result['name'],
         'url': result['external_urls']['spotify'],
-        'edit': url_for('edit_album', album_id=self.spotify_id),
+        'edit': url_for('edit_album', album_id=spotify_id),
     }
 
     return album_details
@@ -225,7 +242,16 @@ class Album(db.Model):
 
         return cls.query.filter(cls.spotify_id == spotify_id)[0]
 
-    def details(self):
+    def name(self):
+        return self.__details()['name']
+
+    def spotifyURL(self):
+        return self.__details()['url']
+
+    def editURL(self):
+        return url_for('edit_album', album_id=self.spotify_id),
+
+    def __details(self):
         return _get_album_details(self.spotify_id)
 
 
