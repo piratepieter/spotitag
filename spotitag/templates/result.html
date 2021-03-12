@@ -3,9 +3,9 @@
 {% block content %}
     <h1>Results</h1>
     {% for artist in artists %}
-        <div><p><a href="{{ artist.spotifyURL() }}">{{ artist.name() }}</a> (<a href="{{ artist.editURL() }}">edit</a>)</p></div>
+        {% include "_artist.html" %}
         {% for album in artist.albums() %}
-            <div><p><a href="{{ album.spotifyURL() }}" style="margin-left: 40px">{{ album.name() }}</a> (<a href="{{ album.editURL() }}">edit</a>)</p></div>
+            {% include "_album.html" %}
         {% endfor %}
     {% endfor %}
 {% endblock %}

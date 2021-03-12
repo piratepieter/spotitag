@@ -153,6 +153,13 @@ class Tag(db.Model):
         return tags
 
 
+def _smallest_image(images):
+    if len(images) == 0:
+        return url_for('static', filename='unknown.png')
+
+    return min(images, key=lambda r: r['width'])['url']
+
+
 def _get_artist_details(spotify_id):
     @memoize(maxsize=512, ttl=3600)
     def memoized_details(spotify_id):
@@ -165,6 +172,7 @@ def _get_artist_details(spotify_id):
             'url': result['external_urls']['spotify'],
             'name': result['name'],
             'edit': url_for('edit_artist', artist_id=spotify_id),
+            'image': _smallest_image(result['images']),
             'albums':
                 [
                     album['id'] for album in album_result['items']
@@ -209,6 +217,9 @@ class Artist(db.Model):
     def albums(self):
         return self.__details()['albums']
 
+    def image(self):
+        return self.__details()['image']
+
     def __details(self):
         return _get_artist_details(self.spotify_id)
 
@@ -222,6 +233,7 @@ def _get_album_details(spotify_id):
         'name': result['name'],
         'url': result['external_urls']['spotify'],
         'edit': url_for('edit_album', album_id=spotify_id),
+        'image': _smallest_image(result['images']),
     }
 
     return album_details
@@ -250,6 +262,9 @@ class Album(db.Model):
 
     def editURL(self):
         return url_for('edit_album', album_id=self.spotify_id),
+
+    def image(self):
+        return self.__details()['image']
 
     def __details(self):
         return _get_album_details(self.spotify_id)
