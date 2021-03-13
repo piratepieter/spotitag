@@ -160,33 +160,23 @@ def _smallest_image(images):
     return min(images, key=lambda r: r['width'])['url']
 
 
+@memoize(maxsize=512, ttl=3600)
 def _get_artist_details(spotify_id):
-    @memoize(maxsize=512, ttl=3600)
-    def memoized_details(spotify_id):
-        spotify_client = get_spotify_client()
-        result = spotify_client.artist(spotify_id)
-        album_result = spotify_client.artist_albums(spotify_id, album_type='album')
+    spotify_client = get_spotify_client()
+    result = spotify_client.artist(spotify_id)
+    album_result = spotify_client.artist_albums(spotify_id, album_type='album')
 
-        artist_details = {
-            'id': spotify_id,
-            'url': result['external_urls']['spotify'],
-            'name': result['name'],
-            'edit': url_for('edit_artist', artist_id=spotify_id),
-            'image': _smallest_image(result['images']),
-            'albums':
-                [
-                    album['id'] for album in album_result['items']
-                ],
-        }
-        return artist_details
-
-    artist_details = memoized_details(spotify_id)
-    album_ids = artist_details['albums']
-    albums = [
-        Album.get(album_id) for album_id in album_ids
-    ]
-    artist_details['albums'] = albums
-
+    artist_details = {
+        'id': spotify_id,
+        'url': result['external_urls']['spotify'],
+        'name': result['name'],
+        'edit': url_for('edit_artist', artist_id=spotify_id),
+        'image': _smallest_image(result['images']),
+        'albums':
+            [
+                album['id'] for album in album_result['items']
+            ],
+    }
     return artist_details
 
 
@@ -215,7 +205,10 @@ class Artist(db.Model):
         return url_for('edit_artist', artist_id=self.spotify_id)
 
     def albums(self):
-        return self.__details()['albums']
+        albums = [
+            Album.get(album_id) for album_id in self.__details()['albums']
+        ]
+        return albums
 
     def image(self):
         return self.__details()['image']
