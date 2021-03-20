@@ -1,5 +1,5 @@
 alembic==1.5.4
-appdirs==1.4.3
+appdirs==1.4.4
 CacheControl==0.12.6
 cacheout==0.11.2
 certifi==2019.11.28
