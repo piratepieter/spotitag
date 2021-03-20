@@ -3,15 +3,9 @@ from flask import url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
 from collections import defaultdict
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
-from cacheout.memoization import memoize
 
 from spotitag import db, login
-
-
-def get_spotify_client():
-    return spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
+from spotitag.spotify import SpotifyHandler, _get_artist_details, _get_album_details
 
 
 class User(UserMixin, db.Model):
@@ -153,33 +147,6 @@ class Tag(db.Model):
         return tags
 
 
-def _smallest_image(images):
-    if len(images) == 0:
-        return url_for('static', filename='unknown.png')
-
-    return min(images, key=lambda r: r['width'])['url']
-
-
-@memoize(maxsize=512, ttl=3600)
-def _get_artist_details(spotify_id):
-    spotify_client = get_spotify_client()
-    result = spotify_client.artist(spotify_id)
-    album_result = spotify_client.artist_albums(spotify_id, album_type='album')
-
-    artist_details = {
-        'id': spotify_id,
-        'url': result['external_urls']['spotify'],
-        'name': result['name'],
-        'edit': url_for('edit_artist', artist_id=spotify_id),
-        'image': _smallest_image(result['images']),
-        'albums':
-            [
-                album['id'] for album in album_result['items']
-            ],
-    }
-    return artist_details
-
-
 class Artist(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
@@ -194,6 +161,14 @@ class Artist(db.Model):
             db.session.rollback()
 
         return cls.query.filter(cls.spotify_id == spotify_id)[0]
+
+    @classmethod
+    def search(cls, artist_query):
+        handler = SpotifyHandler()
+        artist_ids = handler.searchArtistSpotifyIDs(artist_query)
+        artists = [Artist.get(artist_id) for artist_id in artist_ids]
+
+        return artists
 
     def name(self):
         return self.__details()['name']
@@ -215,21 +190,6 @@ class Artist(db.Model):
 
     def __details(self):
         return _get_artist_details(self.spotify_id)
-
-
-@memoize(maxsize=512, ttl=3600)
-def _get_album_details(spotify_id):
-    spotify_client = get_spotify_client()
-    result = spotify_client.album(spotify_id)
-    album_details = {
-        'id': result['id'],
-        'name': result['name'],
-        'url': result['external_urls']['spotify'],
-        'edit': url_for('edit_album', album_id=spotify_id),
-        'image': _smallest_image(result['images']),
-    }
-
-    return album_details
 
 
 class Album(db.Model):

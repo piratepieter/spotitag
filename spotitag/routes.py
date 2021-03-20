@@ -5,7 +5,8 @@ from collections import defaultdict
 
 from spotitag.forms import QueryForm, EditForm, LoginForm, RegistrationForm
 from spotitag import app, db
-from spotitag.models import User, Album, Artist, get_spotify_client
+from spotitag.models import User, Album, Artist
+from spotitag.spotify import SpotifyHandler
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -59,14 +60,7 @@ def register():
 @app.route('/result/<artist>')
 def search_result(artist):
 
-    spotify_client = get_spotify_client()
-
-    search = spotify_client.search(q=f'artist:{artist}', type='artist')
-    artists = [
-        Artist.get(item['id'])
-        for item in search['artists']['items']
-    ]
-
+    artists = Artist.search(artist)
     return render_template('result.html', artists=artists)
 
 
