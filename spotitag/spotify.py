@@ -1,10 +1,45 @@
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from cacheout.memoization import memoize
+from cacheout.fifo import FIFOCache
 from flask import url_for
 
 
+def _fetch_details_album(spotify_id):
+    spotify_client = SpotifyHandler().client()
+    result = spotify_client.album(spotify_id)
+    album_details = {
+        'id': result['id'],
+        'name': result['name'],
+        'url': result['external_urls']['spotify'],
+        'edit': url_for('edit_album', album_id=spotify_id),
+        'image': _smallest_image(result['images']),
+    }
+
+    return album_details
+
+
 class SpotifyHandler:
+
+    __album_cache = FIFOCache(maxsize=512, ttl=3600)
+
+    def detailsForAlbums(self, spotify_ids):
+
+        album_details = self.__album_cache.get_many(spotify_ids)
+       
+        albums_to_fetch = set(spotify_ids) - set(album_details.keys())
+        fetched_details = {
+            spotify_id: _fetch_details_album(spotify_id) for spotify_id in albums_to_fetch
+        }
+
+        album_details.update(fetched_details)
+        self.__album_cache.set_many(fetched_details)
+       
+        return album_details
+
+    def detailsForAlbum(self, spotify_id):
+        details = self.detailsForAlbums([spotify_id])
+        return details[spotify_id]
 
     def client(self):
         return spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
@@ -41,18 +76,3 @@ def _get_artist_details(spotify_id):
             ],
     }
     return artist_details
-
-
-@memoize(maxsize=512, ttl=3600)
-def _get_album_details(spotify_id):
-    spotify_client = SpotifyHandler().client()
-    result = spotify_client.album(spotify_id)
-    album_details = {
-        'id': result['id'],
-        'name': result['name'],
-        'url': result['external_urls']['spotify'],
-        'edit': url_for('edit_album', album_id=spotify_id),
-        'image': _smallest_image(result['images']),
-    }
-
-    return album_details

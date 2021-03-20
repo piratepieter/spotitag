@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from collections import defaultdict
 
 from spotitag import db, login
-from spotitag.spotify import SpotifyHandler, _get_artist_details, _get_album_details
+from spotitag.spotify import SpotifyHandler, _get_artist_details
 
 
 class User(UserMixin, db.Model):
@@ -220,7 +220,7 @@ class Album(db.Model):
         return self.__details()['image']
 
     def __details(self):
-        return _get_album_details(self.spotify_id)
+        return SpotifyHandler().detailsForAlbum(self.spotify_id)
 
 
 @login.user_loader
