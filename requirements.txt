@@ -27,7 +27,7 @@ Mako==1.1.4
 MarkupSafe==1.1.1
 msgpack==1.0.2
 packaging==20.3
-pep517==0.8.2
+pep517==0.10.0
 progress==1.5
 psycopg2==2.8.6
 pyparsing==2.4.6
