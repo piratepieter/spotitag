@@ -5,18 +5,25 @@ from cacheout.fifo import FIFOCache
 from flask import url_for
 
 
-def _fetch_details_album(spotify_id):
+def _fetch_details_albums(spotify_ids):
+    if len(spotify_ids) == 0:
+        return {}
+    
     spotify_client = SpotifyHandler().client()
-    result = spotify_client.album(spotify_id)
-    album_details = {
-        'id': result['id'],
-        'name': result['name'],
-        'url': result['external_urls']['spotify'],
-        'edit': url_for('edit_album', album_id=spotify_id),
-        'image': _smallest_image(result['images']),
+    results = spotify_client.albums(spotify_ids)
+
+    details = {
+        spotify_id: {
+            'id': result['id'],
+            'name': result['name'],
+            'url': result['external_urls']['spotify'],
+            'edit': url_for('edit_album', album_id=spotify_id),
+            'image': _smallest_image(result['images']),
+        }
+        for spotify_id, result in zip(spotify_ids, results['albums'])
     }
 
-    return album_details
+    return details
 
 
 class SpotifyHandler:
@@ -28,9 +35,7 @@ class SpotifyHandler:
         album_details = self.__album_cache.get_many(spotify_ids)
        
         albums_to_fetch = set(spotify_ids) - set(album_details.keys())
-        fetched_details = {
-            spotify_id: _fetch_details_album(spotify_id) for spotify_id in albums_to_fetch
-        }
+        fetched_details = _fetch_details_albums(albums_to_fetch)
 
         album_details.update(fetched_details)
         self.__album_cache.set_many(fetched_details)
@@ -60,7 +65,8 @@ def _smallest_image(images):
 
 @memoize(maxsize=512, ttl=3600)
 def _get_artist_details(spotify_id):
-    spotify_client = SpotifyHandler().client()
+    spotify_handler = SpotifyHandler()
+    spotify_client = spotify_handler.client()
     result = spotify_client.artist(spotify_id)
     album_result = spotify_client.artist_albums(spotify_id, album_type='album')
 
@@ -75,4 +81,8 @@ def _get_artist_details(spotify_id):
                 album['id'] for album in album_result['items']
             ],
     }
+
+    # Make sure to prefetch all album details in one go.
+    spotify_handler.detailsForAlbums(artist_details['albums'])
+
     return artist_details
