@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Results</h1>
+    <h1>{{ title }}</h1>
     {% for artist in artists %}
-        {% include "_artist.html" %}
-        {% for album in artist.albums() %}
-            {% include "_album.html" %}
-        {% endfor %}
+        {{ artist.render() }}
     {% endfor %}
 {% endblock %}

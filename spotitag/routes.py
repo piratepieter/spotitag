@@ -61,7 +61,11 @@ def register():
 def search_result(artist):
 
     artists = Artist.search(artist)
-    return render_template('result.html', artists=artists)
+    return render_template(
+        'result.html',
+        title=f'Search results for artist {artist}',
+        artists=artists
+    )
 
 
 @app.route('/tags')

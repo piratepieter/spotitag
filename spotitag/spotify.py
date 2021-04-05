@@ -55,6 +55,11 @@ class SpotifyHandler:
 
         return artist_spotify_ids
 
+    def artistAlbums(self, spotify_id):
+        album_result = self.client().artist_albums(spotify_id, album_type='album')
+        albums = [album['id'] for album in album_result['items']]
+        return albums
+
 
 def _smallest_image(images):
     if len(images) == 0:
@@ -68,7 +73,6 @@ def _get_artist_details(spotify_id):
     spotify_handler = SpotifyHandler()
     spotify_client = spotify_handler.client()
     result = spotify_client.artist(spotify_id)
-    album_result = spotify_client.artist_albums(spotify_id, album_type='album')
 
     artist_details = {
         'id': spotify_id,
@@ -76,13 +80,6 @@ def _get_artist_details(spotify_id):
         'name': result['name'],
         'edit': url_for('edit_artist', artist_id=spotify_id),
         'image': _smallest_image(result['images']),
-        'albums':
-            [
-                album['id'] for album in album_result['items']
-            ],
     }
-
-    # Make sure to prefetch all album details in one go.
-    spotify_handler.detailsForAlbums(artist_details['albums'])
 
     return artist_details

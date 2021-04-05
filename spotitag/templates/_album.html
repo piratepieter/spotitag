@@ -1,9 +1,11 @@
-<div>
-    <table>
-        <tr valign="center">
-            <td><img src="{{ album.image() }}" width="70px"/></td>
-            <td><a href="{{ album.spotifyURL() }}">{{ album.name() }}</a></td>
-            <td>(<a href="{{ album.editURL() }}">edit</a>)</td>
-        </tr>
-    </table>
-</div>
+{% macro render(album) %}
+    <div>
+        <table>
+            <tr valign="center">
+                <td><img src="{{ album.image() }}" width="70px"/></td>
+                <td><a href="{{ album.spotifyURL() }}">{{ album.name() }}</a></td>
+                <td>(<a href="{{ album.editURL() }}">edit</a>)</td>
+            </tr>
+        </table>
+    </div>
+{% endmacro %}

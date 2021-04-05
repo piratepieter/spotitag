@@ -1,5 +1,5 @@
 from flask_login import UserMixin
-from flask import url_for
+from flask import url_for, get_template_attribute
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
 from collections import defaultdict
@@ -180,9 +180,8 @@ class Artist(db.Model):
         return url_for('edit_artist', artist_id=self.spotify_id)
 
     def albums(self):
-        albums = [
-            Album.get(album_id) for album_id in self.__details()['albums']
-        ]
+        handler = SpotifyHandler()
+        albums = handler.artistAlbums(self.spotify_id)
         return albums
 
     def image(self):
@@ -191,6 +190,9 @@ class Artist(db.Model):
     def __details(self):
         return _get_artist_details(self.spotify_id)
 
+    def render(self):
+        render_artist = get_template_attribute('_artist.html', 'render')
+        return render_artist(artist=self)
 
 class Album(db.Model):
 
@@ -221,6 +223,10 @@ class Album(db.Model):
 
     def __details(self):
         return SpotifyHandler().detailsForAlbum(self.spotify_id)
+
+    def render(self):
+        render_album = get_template_attribute('_album.html', 'render')
+        return render_album(album=self)
 
 
 @login.user_loader
